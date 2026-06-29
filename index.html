@@ -3,16 +3,16 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Отладка sendData</title>
+  <title>Mini App Привет</title>
   <style>
     body { font-family: Arial; text-align: center; margin-top: 80px; }
     button { padding: 12px 30px; font-size: 18px; margin: 10px; }
-    #log { margin-top: 20px; white-space: pre-wrap; text-align: left; max-width: 300px; margin-left: auto; margin-right: auto; color: #333; }
+    #log { margin-top: 20px; white-space: pre-wrap; text-align: left; max-width: 300px; margin-left: auto; margin-right: auto; }
   </style>
 </head>
 <body>
   <button id="btnSend">👋 Сказать «Привет»</button>
-  <button id="btnClose">🧪 Просто закрыть окно</button>
+  <button id="btnClose">🧪 Закрыть окно (тест)</button>
   <div id="log"></div>
 
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
@@ -20,41 +20,36 @@
     const tg = window.Telegram.WebApp;
     const logDiv = document.getElementById('log');
 
-    function log(msg) {
-      logDiv.innerText += msg + '\n';
-    }
+    function log(msg) { logDiv.innerText += msg + '\n'; }
 
-    // Проверим доступность API
-    if (typeof tg.sendData !== 'function') {
-      log('❌ sendData недоступен. Проверьте домен в BotFather.');
-    } else {
-      log('✅ sendData доступен.');
-    }
+    log(typeof tg.sendData === 'function' ? '✅ sendData доступен' : '❌ sendData недоступен');
 
-    // Тест закрытия окна – работает ли вообще WebApp API
-    document.getElementById('btnClose').addEventListener('click', () => {
-      tg.close();
-    });
-
-    // Отправка данных
     document.getElementById('btnSend').addEventListener('click', () => {
       log('▶ Нажата кнопка отправки...');
-      
-      // Используем try/catch и обработчики then/catch
       try {
-        const promise = tg.sendData("Привет!");
-        log('▶ sendData вызван, ожидаем...');
-        
-        promise.then(() => {
-          // Сюда мы попадём, только если отправка успешна,
-          // но окно может закрыться мгновенно – вы не увидите эту запись.
-          log('✅ sendData выполнен успешно! Окно закроется.');
-        }).catch((err) => {
-          log('❌ Ошибка sendData: ' + JSON.stringify(err, null, 2));
-        });
+        const result = tg.sendData("Привет!");
+        log('result: ' + typeof result);
+
+        if (result && typeof result.then === 'function') {
+          // Это промис – обрабатываем стандартно
+          result.then(() => {
+            log('✅ Успех! Окно закроется автоматически.');
+          }).catch(err => {
+            log('❌ Ошибка: ' + JSON.stringify(err));
+            setTimeout(() => tg.close(), 500);
+          });
+        } else {
+          // Промис не вернулся, окно может не закрыться – помогаем
+          log('⚠️ sendData не вернул промис, принудительно закроем окно через 1 сек');
+          setTimeout(() => tg.close(), 1000);
+        }
       } catch (e) {
-        log('❌ Исключение при вызове: ' + e.message);
+        log('❌ Исключение: ' + e.message);
       }
+    });
+
+    document.getElementById('btnClose').addEventListener('click', () => {
+      tg.close();
     });
   </script>
 </body>
