@@ -3,116 +3,172 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Тест sendData</title>
+  <title>Тест sendData (финальный)</title>
   <style>
     body {
       font-family: Arial, sans-serif;
       text-align: center;
-      margin-top: 40px;
+      margin-top: 30px;
       padding: 0 16px;
     }
     button {
       padding: 14px 32px;
       font-size: 18px;
-      margin: 10px;
+      margin: 8px;
       border: none;
       border-radius: 8px;
       cursor: pointer;
     }
     #btnSend { background: #4CAF50; color: white; }
     #btnClose { background: #ccc; color: black; }
+    #btnTestApi { background: #2196F3; color: white; }
     #log {
-      margin-top: 20px;
+      margin: 20px auto 0;
       text-align: left;
-      background: #f9f9f9;
+      background: #fafafa;
       padding: 12px;
       border-radius: 8px;
       font-size: 13px;
       white-space: pre-wrap;
       word-break: break-word;
-      max-width: 360px;
-      margin-left: auto;
-      margin-right: auto;
+      max-width: 400px;
+      max-height: 400px;
+      overflow-y: auto;
+      box-shadow: 0 0 5px rgba(0,0,0,0.1);
     }
+    .error { color: red; font-weight: bold; }
+    .warn { color: #e67e22; font-weight: bold; }
+    .ok { color: green; font-weight: bold; }
   </style>
 </head>
 <body>
-  <h3>🔬 Тест sendData</h3>
-  <button id="btnSend">📤 Отправить "Привет!"</button>
+  <h3>📬 Тест Web App → Бот</h3>
+  <button id="btnSend">📤 Отправить «Привет!»</button>
+  <button id="btnTestApi">🧪 Тест Bot API (fetch)</button>
   <button id="btnClose">🚪 Закрыть окно</button>
   <div id="log"></div>
 
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <script>
+    // ---------- Глобальный перехват ошибок ----------
+    window.onerror = function(message, source, lineno, colno, error) {
+      const logDiv = document.getElementById('log');
+      if (logDiv) {
+        logDiv.innerHTML += `<div class="error">❌ Глобальная ошибка: ${message} (строка ${lineno})</div>`;
+      }
+      return true; // не даём ошибке погасить приложение
+    };
+
+    window.addEventListener('unhandledrejection', function(event) {
+      const logDiv = document.getElementById('log');
+      if (logDiv) {
+        logDiv.innerHTML += `<div class="error">❌ Необработанный Promise: ${event.reason}</div>`;
+      }
+    });
+
+    // ---------- Основной код ----------
     const tg = window.Telegram.WebApp;
     const logDiv = document.getElementById('log');
 
-    function log(msg) {
-      logDiv.textContent += msg + '\n';
-      // Автопрокрутка вниз
+    function log(msg, className = '') {
+      const line = document.createElement('div');
+      line.textContent = msg;
+      if (className) line.className = className;
+      logDiv.appendChild(line);
       logDiv.scrollTop = logDiv.scrollHeight;
     }
 
-    // --- Базовая информация ---
+    // Базовая информация
     log('🔵 Платформа: ' + tg.platform);
     log('🔵 Версия WebApp: ' + tg.version);
 
-    // Проверка initDataUnsafe
     const unsafe = tg.initDataUnsafe;
-    log('🔵 query_id: ' + unsafe.query_id);
-    log('🔵 user: ' + (unsafe.user ? JSON.stringify(unsafe.user.first_name) : 'отсутствует'));
-    log('🔵 start_param: ' + (unsafe.start_param || 'нет'));
+    log('🔵 Полный initDataUnsafe: ' + JSON.stringify(unsafe, null, 2));
 
-    if (unsafe.user && unsafe.query_id) {
-      log('✅ Сессия валидна – Mini App открыт через бота');
+    const hasUser = !!(unsafe.user);
+    const hasQueryId = !!(unsafe.query_id);
+    log(`query_id: ${unsafe.query_id ?? 'НЕТ'}`, hasQueryId ? 'ok' : 'warn');
+    log(`user: ${unsafe.user ? unsafe.user.first_name : 'НЕТ'}`, hasUser ? 'ok' : 'warn');
+
+    if (hasUser && hasQueryId) {
+      log('✅ Сессия валидна – данные МОГУТ быть отправлены.', 'ok');
     } else {
-      log('⚠️ Сессия невалидна! Данные не уйдут. Откройте приложение через кнопку бота.');
+      log('⚠️ Сессия НЕВАЛИДНА! Отправка НЕВОЗМОЖНА.', 'error');
+      log('Причина: Mini App открыт не через кнопку бота или не тот бот.', 'error');
     }
 
-    // Сообщаем Telegram, что приложение готово
     tg.ready();
 
-    // --- Кнопка отправки данных ---
+    // ---------- Кнопка 1: sendData ----------
     document.getElementById('btnSend').addEventListener('click', () => {
-      log('▶ Нажата кнопка отправки');
+      log('▶ Нажата кнопка отправки через sendData');
 
-      // Дополнительная проверка
-      if (!unsafe.user || !unsafe.query_id) {
-        log('❌ Отправка невозможна: нет query_id/user. Откройте Mini App через кнопку бота.');
+      if (!hasUser || !hasQueryId) {
+        log('❌ Отправка заблокирована: нет user/query_id', 'error');
         return;
       }
 
       if (typeof tg.sendData !== 'function') {
-        log('❌ Метод sendData не поддерживается этой версией Telegram');
+        log('❌ sendData не поддерживается', 'error');
         return;
       }
 
       try {
+        log('📤 Вызываю sendData("Привет!")...');
         const result = tg.sendData('Привет!');
-        log('📤 sendData вызван, результат: ' + typeof result);
+        log('📤 sendData вызван. Тип результата: ' + typeof result);
 
-        // Промис или не промис – не важно, данные уже отправляются
+        // НЕ вызываем tg.close() вручную – Telegram сам закроет окно, если данные отправлены
         if (result && typeof result.then === 'function') {
-          result.then(() => {
-            log('✅ Промис выполнен, окно закроется');
-          }).catch(e => {
-            log('❌ Ошибка в промисе: ' + e.message);
-          });
+          result
+            .then(() => log('✅ Промис выполнен, окно должно закрыться'))
+            .catch(e => log('❌ Ошибка в промисе: ' + e.message, 'error'));
         } else {
-          log('ℹ️ sendData не возвращает промис. Данные всё равно отправлены.');
-          // Принудительно закроем через 500 мс, если окно ещё открыто
+          log('ℹ️ Промис не возвращается. Ожидаем автоматического закрытия.');
+          // Если через 2 секунды окно всё ещё открыто – sendData не сработал
           setTimeout(() => {
-            log('⏳ Принудительное закрытие окна...');
-            tg.close();
-          }, 500);
+            if (document.visibilityState === 'visible') {
+              log('⚠️ Прошло 2 секунды, окно не закрылось. Вероятно, sendData не отправил данные.', 'warn');
+            }
+          }, 2000);
         }
       } catch (e) {
-        log('❌ Ошибка при вызове sendData: ' + e.message);
-        setTimeout(() => tg.close(), 1000);
+        log('❌ Ошибка при вызове sendData: ' + e.message, 'error');
       }
     });
 
-    // --- Кнопка закрытия ---
+    // ---------- Кнопка 2: Тест Bot API (fetch) ----------
+    document.getElementById('btnTestApi').addEventListener('click', async () => {
+      log('▶ Тест Bot API (fetch)');
+      // Замените на свой токен
+      const BOT_TOKEN = '8891675732:AAGgPRMnf2BUbjN1dVDjDWhl1ERlVb0yBKE';   // <-- вставьте токен
+      const chatId = unsafe.user ? unsafe.user.id : null;
+      if (!chatId) {
+        log('❌ Не удалось получить chat_id из initDataUnsafe', 'error');
+        return;
+      }
+      try {
+        const res = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            chat_id: chatId,
+            text: 'Тестовое сообщение из Mini App (fetch)'
+          })
+        });
+        const data = await res.json();
+        log('Ответ API: ' + JSON.stringify(data));
+        if (data.ok) {
+          log('✅ Сообщение отправлено боту. Проверьте чат.', 'ok');
+        } else {
+          log('❌ Ошибка: ' + data.description, 'error');
+        }
+      } catch (e) {
+        log('❌ Ошибка fetch: ' + e.message, 'error');
+      }
+    });
+
+    // ---------- Кнопка 3: Закрыть окно ----------
     document.getElementById('btnClose').addEventListener('click', () => {
       log('🚪 Закрытие по кнопке');
       tg.close();
