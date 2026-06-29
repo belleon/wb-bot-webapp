@@ -39,29 +39,76 @@
 </body>
 </html> -->
 <!DOCTYPE html>
-<html>
-<head><meta charset="utf-8"><title>Test</title>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
-<script>
-    // Проверка выполняется после загрузки библиотеки
-    Telegram.WebApp.ready(); // важно: сигнализирует, что приложение готово
-    setTimeout(function() {
-        var msg = '';
-        if (typeof Telegram === 'undefined') {
-            msg = 'Telegram не определён';
-        } else if (typeof Telegram.WebApp === 'undefined') {
-            msg = 'Telegram.WebApp не определён';
-        } else if (!Telegram.WebApp.initData) {
-            msg = 'initData отсутствует (возможно, не в контексте WebApp)';
-        } else {
-            msg = '✅ Контекст WebApp подтверждён. initData длина: ' + Telegram.WebApp.initData.length;
-        }
-        alert(msg);
-    }, 200);
-</script>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ввод API-ключа</title>
+    <style>
+        body { font-family: sans-serif; padding: 16px; }
+        input { width: 100%; padding: 8px; margin: 8px 0; }
+        button { padding: 10px 20px; }
+    </style>
 </head>
 <body>
-<button onclick="alert(Telegram.WebApp.sendData('ok'))">Send ok</button>
-<script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <h3>Введите API-ключ Wildberries</h3>
+    <input type="text" id="api_key" placeholder="Ключ">
+    <button id="saveBtn">Сохранить</button>
+
+    <!-- Обязательно сначала загружаем библиотеку Telegram -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script>
+        // Ждём полной загрузки библиотеки
+        Telegram.WebApp.ready();
+
+        // Извлекаем токен из URL
+        function getToken() {
+            const params = new URLSearchParams(window.location.search);
+            return params.get('token') || '';
+        }
+
+        // Функция отправки
+        function sendApiKey() {
+            const apiKeyInput = document.getElementById('api_key');
+            const apiKey = apiKeyInput.value.trim();
+
+            if (!apiKey) {
+                alert('Введите API-ключ');
+                return;
+            }
+
+            const sessionToken = getToken();
+            if (!sessionToken) {
+                alert('Ошибка: отсутствует токен сессии в URL');
+                return;
+            }
+
+            const payload = JSON.stringify({
+                session_token: sessionToken,
+                api_key: apiKey
+            });
+
+            // Проверяем наличие метода sendData
+            if (typeof Telegram.WebApp.sendData !== 'function') {
+                alert('Метод sendData недоступен');
+                return;
+            }
+
+            try {
+                const result = Telegram.WebApp.sendData(payload);
+                alert('sendData вернул: ' + result);
+                if (result) {
+                    Telegram.WebApp.close();
+                } else {
+                    alert('sendData вернул false. Проверьте домен в BotFather и перезапустите бота.');
+                }
+            } catch (e) {
+                alert('Ошибка при отправке: ' + e.message);
+            }
+        }
+
+        // Привязываем обработчик к кнопке
+        document.getElementById('saveBtn').addEventListener('click', sendApiKey);
+    </script>
 </body>
 </html>
