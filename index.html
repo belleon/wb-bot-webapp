@@ -3,39 +3,34 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Тест передачи API-ключа</title>
+    <title>Тест</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <style>
-        body { font-family: sans-serif; padding: 20px; }
-        input, button { width: 100%; padding: 12px; margin: 8px 0; box-sizing: border-box; font-size: 16px; }
-        .status { color: green; margin-top: 10px; }
-    </style>
 </head>
 <body>
-    <h3>Тест отправки API-ключа</h3>
-    <input type="text" id="apiKey" placeholder="Введите любой текст">
-    <button id="sendBtn" disabled>Отправить в бота</button>
-    <div class="status" id="status"></div>
+    <h3>Тест отправки</h3>
+    <input type="text" id="apiKey" placeholder="Введите текст">
+    <button id="sendBtn" disabled>Отправить</button>
+    <p id="status"></p>
 
     <script>
         const tg = window.Telegram.WebApp;
         tg.ready();
 
-        const apiKeyInput = document.getElementById('apiKey');
-        const sendBtn = document.getElementById('sendBtn');
-        const statusDiv = document.getElementById('status');
-
-        apiKeyInput.addEventListener('input', () => {
-            sendBtn.disabled = apiKeyInput.value.trim() === '';
+        document.getElementById('apiKey').addEventListener('input', (e) => {
+            document.getElementById('sendBtn').disabled = e.target.value.trim() === '';
         });
 
-        sendBtn.addEventListener('click', () => {
-            const apiKey = apiKeyInput.value.trim();
+        document.getElementById('sendBtn').addEventListener('click', () => {
+            const apiKey = document.getElementById('apiKey').value.trim();
             if (!apiKey) return;
 
-            // Отправляем открытый текст в поле "api_key"
-            tg.sendData(JSON.stringify({ api_key: apiKey }));
-            statusDiv.textContent = '✅ Данные отправлены. Окно закроется автоматически.';
+            try {
+                tg.sendData(JSON.stringify({ api_key: apiKey }));
+                document.getElementById('status').textContent = 'Отправлено, закрываю...';
+                tg.close();  // закроет Mini App, если разрешено
+            } catch (e) {
+                document.getElementById('status').textContent = 'Ошибка: ' + e.message;
+            }
         });
     </script>
 </body>
