@@ -27,25 +27,53 @@
             margin-top: 20px;
             color: var(--tg-theme-hint-color, #333);
         }
+        #debug {
+            margin-top: 20px;
+            font-size: 14px;
+            color: red;
+            white-space: pre-wrap;
+        }
     </style>
 </head>
 <body>
     <button id="sayHelloBtn">👋 Сказать «Привет»</button>
     <div id="greeting">Привет!</div>
+    <div id="debug"></div>
 
-    <!-- Telegram Web App JS -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script>
         const tg = window.Telegram.WebApp;
-        tg.ready(); // обязательно сообщить Telegram, что приложение готово
+        tg.ready();
+
+        const debug = document.getElementById("debug");
 
         document.getElementById("sayHelloBtn").addEventListener("click", () => {
-            // Показываем приветствие на странице
+            // Показываем приветствие сразу
             document.getElementById("greeting").style.display = "block";
 
-            // Отправляем данные боту
-            tg.sendData("Привет!");
+            // Отправляем данные с обработкой ошибок
+            try {
+                tg.sendData("Привет!")
+                    .then(() => {
+                        // Успех – окно закроется автоматически, но можно ничего не делать
+                        debug.innerText = "Данные отправлены, окно закроется...";
+                    })
+                    .catch((err) => {
+                        debug.innerText = "Ошибка sendData: " + JSON.stringify(err);
+                        console.error("sendData error:", err);
+                    });
+            } catch (e) {
+                debug.innerText = "Исключение при вызове sendData: " + e.message;
+                console.error(e);
+            }
         });
+
+        // Дополнительно: принудительно закрыть через 3 секунды, если не закрылось
+        setTimeout(() => {
+            if (tg.isExpanded) {
+                tg.close();
+            }
+        }, 3000);
     </script>
 </body>
 </html>
