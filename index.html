@@ -1,56 +1,159 @@
-<!-- <!DOCTYPE html>
-<html>
+<!DOCTYPE html>
+<html lang="ru">
 <head>
-    <meta charset="utf-8">
-    <title>Ввод API-ключа</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Подключение маркетплейса</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <script>
-        function submitKey() {
-    const apiKey = document.getElementById('api_key').value.trim();
-    const urlParams = new URLSearchParams(window.location.search);
-    const sessionToken = urlParams.get('token');
-
-    var payload = JSON.stringify({
-        session_token: sessionToken,
-        api_key: apiKey
-    });
-
-    try {
-        var result = Telegram.WebApp.sendData(payload);
-        alert('sendData вернул: ' + result); // покажет true или false
-        if (result) {
-            Telegram.WebApp.close();
-        } else {
-            alert('sendData вернул false — данные не отправлены');
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            padding: 20px;
+            margin: 0;
+            background: var(--tg-theme-bg-color, #fff);
+            color: var(--tg-theme-text-color, #000);
         }
-    } catch (e) {
-        alert('Ошибка sendData: ' + e.message);
-    }
-}
-        </script>
+        .container {
+            max-width: 400px;
+            margin: 0 auto;
+        }
+        h2 {
+            margin-top: 0;
+        }
+        label {
+            display: block;
+            margin: 15px 0 5px;
+            font-weight: bold;
+        }
+        input, select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--tg-theme-hint-color, #ccc);
+            border-radius: 8px;
+            font-size: 16px;
+            box-sizing: border-box;
+            background: var(--tg-theme-secondary-bg-color, #f0f0f0);
+            color: inherit;
+        }
+        button {
+            width: 100%;
+            margin-top: 20px;
+            padding: 12px;
+            background: var(--tg-theme-button-color, #2ea6ff);
+            color: var(--tg-theme-button-text-color, #fff);
+            border: none;
+            border-radius: 8px;
+            font-size: 18px;
+            cursor: pointer;
+        }
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .error {
+            color: red;
+            font-size: 14px;
+            margin-top: 10px;
+        }
+    </style>
 </head>
 <body>
-    <h2>Введите API-ключ Wildberries</h2>
-    <input type="text" id="api_key" placeholder="Ключ">
-    <button onclick="submitKey()">Сохранить</button>
+    <div class="container">
+        <h2>Введите API-ключ продавца</h2>
+        <label for="apiKey">API-ключ:</label>
+        <input type="password" id="apiKey" placeholder="Вставьте ключ" autocomplete="off">
+        <button id="sendBtn" disabled>🔒 Отправить защищённо</button>
+        <div class="error" id="error"></div>
+    </div>
 
+    <script>
+        // ====== Публичный ключ (PEM) – замените на ваш ======
+        const PUBLIC_KEY_PEM = `-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA4D5V5p/LvCjUt6ImX75y
+Sba8DhZuU/oBMuPCdIDzv8imgPcD33+BuumAF0XmzYG9p2zzHbw0urnGiUwTM7pt
+3zhikVjdAIFn/aD9O5ChUqf0fsFaEZZpfZj8s0MmUgZ9tC01hC8DiAXQVa69ka8T
+f6oCQ8lNtTjpoOW2A8ocvYCwds51wGLLg375pnKdDZD/3KMlfV34Ss/b6HTCFs1B
+m8B6BSVLZP8a9pr5jLlz3rJGN1q5mwNYLnZH5+MK9ZTJ+aYtLfX+SuJSlwHNqx/f
+pYkryUGDfuI0KdJmk4coWP7FNl3tJYJty3ehe9tVE9rEJDyrLoL8lPGxXOTkSq49
+5QIDAQAB
+-----END PUBLIC KEY-----`;
 
+        const tg = window.Telegram.WebApp;
+        tg.ready(); // Сообщаем Telegram, что приложение готово
+
+        const apiKeyInput = document.getElementById('apiKey');
+        const sendBtn = document.getElementById('sendBtn');
+        const errorDiv = document.getElementById('error');
+
+        // Кнопка активна, только если что-то введено
+        apiKeyInput.addEventListener('input', () => {
+            sendBtn.disabled = apiKeyInput.value.trim() === '';
+        });
+
+        // Функция преобразования PEM (SPKI) в CryptoKey
+        async function importPublicKey(pem) {
+            // Убираем заголовки и переносы строк, получаем Base64
+            const pemHeader = "-----BEGIN PUBLIC KEY-----";
+            const pemFooter = "-----END PUBLIC KEY-----";
+            const pemContents = pem
+                .replace(pemHeader, '')
+                .replace(pemFooter, '')
+                .replace(/\s/g, '');
+            // Декодируем Base64 в ArrayBuffer
+            const binaryDer = Uint8Array.from(atob(pemContents), c => c.charCodeAt(0));
+            return await crypto.subtle.importKey(
+                "spki",
+                binaryDer.buffer,
+                {
+                    name: "RSA-OAEP",
+                    hash: "SHA-256"
+                },
+                false, // ключ не экспортируемый
+                ["encrypt"]
+            );
+        }
+
+        // Шифрование строки с помощью RSA-OAEP
+        async function encryptData(publicKey, plaintext) {
+            const encoder = new TextEncoder();
+            const data = encoder.encode(plaintext);
+            const encrypted = await crypto.subtle.encrypt(
+                {
+                    name: "RSA-OAEP"
+                },
+                publicKey,
+                data
+            );
+            // Возвращаем Base64 зашифрованных данных
+            return btoa(String.fromCharCode(...new Uint8Array(encrypted)));
+        }
+
+        // Обработчик нажатия кнопки
+        sendBtn.addEventListener('click', async () => {
+            const apiKey = apiKeyInput.value.trim();
+            if (!apiKey) return;
+
+            sendBtn.disabled = true;
+            sendBtn.textContent = '⏳ Шифрование...';
+            errorDiv.textContent = '';
+
+            try {
+                // 1. Импортируем публичный ключ
+                const publicKey = await importPublicKey(PUBLIC_KEY_PEM);
+                // 2. Шифруем API-ключ
+                const encryptedBase64 = await encryptData(publicKey, apiKey);
+                // 3. Отправляем данные в бот
+                tg.sendData(JSON.stringify({
+                    encrypted_key: encryptedBase64
+                }));
+                // После вызова sendData мини-приложение закроется автоматически
+            } catch (err) {
+                console.error(err);
+                errorDiv.textContent = '❌ Ошибка шифрования. Проверьте ключ и повторите.';
+                sendBtn.disabled = false;
+                sendBtn.textContent = '🔒 Отправить защищённо';
+            }
+        });
     </script>
-</body>
-</html>
- -->
-<!DOCTYPE html>
-<html>
-<body>
-<button id="btn">Send test</button>
-<script src="https://telegram.org/js/telegram-web-app.js"></script>
-<script>
-    Telegram.WebApp.ready();
-    document.getElementById('btn').onclick = function() {
-        var r = Telegram.WebApp.sendData('{"test":1}');
-        alert('sendData: ' + r);
-        if (r) Telegram.WebApp.close();
-    };
-</script>
 </body>
 </html>
