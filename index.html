@@ -3,33 +3,67 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Тест</title>
+    <title>Ввод API-ключа</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        body { font-family: sans-serif; padding: 20px; }
+        input, button { width: 100%; padding: 12px; margin: 8px 0; box-sizing: border-box; }
+        .error { color: red; }
+    </style>
 </head>
 <body>
-    <h3>Тест отправки</h3>
-    <input type="text" id="apiKey" placeholder="Введите текст">
-    <button id="sendBtn" disabled>Отправить</button>
-    <p id="status"></p>
+    <h3>Введите API-ключ</h3>
+    <input type="password" id="apiKey" placeholder="Ключ">
+    <button id="sendBtn" disabled>🔒 Отправить</button>
+    <div class="error" id="error"></div>
 
     <script>
+        // ===== ВСТАВЬТЕ СЮДА ВАШ ПУБЛИЧНЫЙ КЛЮЧ (из public_key.pem) =====
+        const PUBLIC_KEY_PEM = `-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA...
+-----END PUBLIC KEY-----`;
+
         const tg = window.Telegram.WebApp;
         tg.ready();
 
-        document.getElementById('apiKey').addEventListener('input', (e) => {
-            document.getElementById('sendBtn').disabled = e.target.value.trim() === '';
+        const apiKeyInput = document.getElementById('apiKey');
+        const sendBtn = document.getElementById('sendBtn');
+        const errorDiv = document.getElementById('error');
+
+        apiKeyInput.addEventListener('input', () => {
+            sendBtn.disabled = apiKeyInput.value.trim() === '';
         });
 
-        document.getElementById('sendBtn').addEventListener('click', () => {
-            const apiKey = document.getElementById('apiKey').value.trim();
-            if (!apiKey) return;
+        async function importPublicKey(pem) {
+            const pemHeader = "-----BEGIN PUBLIC KEY-----";
+            const pemFooter = "-----END PUBLIC KEY-----";
+            const pemContents = pem.replace(pemHeader, '').replace(pemFooter, '').replace(/\s/g, '');
+            const binaryDer = Uint8Array.from(atob(pemContents), c => c.charCodeAt(0));
+            return await crypto.subtle.importKey(
+                "spki", binaryDer.buffer,
+                { name: "RSA-OAEP", hash: "SHA-256" },
+                false, ["encrypt"]
+            );
+        }
 
+        sendBtn.addEventListener('click', async () => {
+            const apiKey = apiKeyInput.value.trim();
+            if (!apiKey) return;
+            sendBtn.disabled = true;
+            sendBtn.textContent = 'Шифрую...';
+            errorDiv.textContent = '';
             try {
-                tg.sendData(JSON.stringify({ api_key: apiKey }));
-                document.getElementById('status').textContent = 'Отправлено, закрываю...';
-                tg.close();  // закроет Mini App, если разрешено
-            } catch (e) {
-                document.getElementById('status').textContent = 'Ошибка: ' + e.message;
+                const publicKey = await importPublicKey(PUBLIC_KEY_PEM);
+                const encrypted = await crypto.subtle.encrypt(
+                    { name: "RSA-OAEP" }, publicKey, new TextEncoder().encode(apiKey)
+                );
+                const encryptedBase64 = btoa(String.fromCharCode(...new Uint8Array(encrypted)));
+                tg.sendData(JSON.stringify({ encrypted_key: encryptedBase64 }));
+                tg.close();   // попытка закрыть окно после отправки
+            } catch (err) {
+                errorDiv.textContent = 'Ошибка: ' + err.message;
+                sendBtn.disabled = false;
+                sendBtn.textContent = '🔒 Отправить';
             }
         });
     </script>
