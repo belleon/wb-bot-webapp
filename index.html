@@ -7,13 +7,13 @@
     <script>
         function submitKey() {
             const apiKey = document.getElementById('api_key').value;
+            alert(apiKey);
             const urlParams = new URLSearchParams(window.location.search);
             const sessionToken = urlParams.get('token');
             Telegram.WebApp.sendData(JSON.stringify({
                 session_token: sessionToken,
                 api_key: apiKey
             }));
-            alert (sessionToken)
         }
         
         </script>
