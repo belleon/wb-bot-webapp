@@ -3,73 +3,31 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ввод API-ключа</title>
+    <title>Диагностика</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <style>
-        body { font-family: sans-serif; padding: 20px; }
-        input, button { width: 100%; padding: 12px; margin: 8px 0; box-sizing: border-box; }
-        .error { color: red; }
-    </style>
 </head>
 <body>
-    <h3>Введите API-ключ</h3>
-    <input type="password" id="apiKey" placeholder="Ключ">
-    <button id="sendBtn" disabled>🔒 Отправить</button>
-    <div class="error" id="error"></div>
-
+    <h3>Тест отправки</h3>
+    <input type="text" id="textInput" placeholder="Введите любой текст">
+    <button id="sendBtn" disabled>Отправить в бота</button>
+    <div id="status"></div>
     <script>
-        // ===== ВСТАВЬТЕ СЮДА ВАШ ПУБЛИЧНЫЙ КЛЮЧ (из public_key.pem) =====
-        const PUBLIC_KEY_PEM = `-----BEGIN PUBLIC KEY-----
-MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA4D5V5p/LvCjUt6ImX75y
-Sba8DhZuU/oBMuPCdIDzv8imgPcD33+BuumAF0XmzYG9p2zzHbw0urnGiUwTM7pt
-3zhikVjdAIFn/aD9O5ChUqf0fsFaEZZpfZj8s0MmUgZ9tC01hC8DiAXQVa69ka8T
-f6oCQ8lNtTjpoOW2A8ocvYCwds51wGLLg375pnKdDZD/3KMlfV34Ss/b6HTCFs1B
-m8B6BSVLZP8a9pr5jLlz3rJGN1q5mwNYLnZH5+MK9ZTJ+aYtLfX+SuJSlwHNqx/f
-pYkryUGDfuI0KdJmk4coWP7FNl3tJYJty3ehe9tVE9rEJDyrLoL8lPGxXOTkSq49
-5QIDAQAB
------END PUBLIC KEY-----`;
-
         const tg = window.Telegram.WebApp;
         tg.ready();
 
-        const apiKeyInput = document.getElementById('apiKey');
-        const sendBtn = document.getElementById('sendBtn');
-        const errorDiv = document.getElementById('error');
-
-        apiKeyInput.addEventListener('input', () => {
-            sendBtn.disabled = apiKeyInput.value.trim() === '';
+        document.getElementById('textInput').addEventListener('input', (e) => {
+            document.getElementById('sendBtn').disabled = e.target.value.trim() === '';
         });
 
-        async function importPublicKey(pem) {
-            const pemHeader = "-----BEGIN PUBLIC KEY-----";
-            const pemFooter = "-----END PUBLIC KEY-----";
-            const pemContents = pem.replace(pemHeader, '').replace(pemFooter, '').replace(/\s/g, '');
-            const binaryDer = Uint8Array.from(atob(pemContents), c => c.charCodeAt(0));
-            return await crypto.subtle.importKey(
-                "spki", binaryDer.buffer,
-                { name: "RSA-OAEP", hash: "SHA-256" },
-                false, ["encrypt"]
-            );
-        }
-
-        sendBtn.addEventListener('click', async () => {
-            const apiKey = apiKeyInput.value.trim();
-            if (!apiKey) return;
-            sendBtn.disabled = true;
-            sendBtn.textContent = 'Шифрую...';
-            errorDiv.textContent = '';
+        document.getElementById('sendBtn').addEventListener('click', () => {
+            const text = document.getElementById('textInput').value.trim();
+            if (!text) return;
             try {
-                const publicKey = await importPublicKey(PUBLIC_KEY_PEM);
-                const encrypted = await crypto.subtle.encrypt(
-                    { name: "RSA-OAEP" }, publicKey, new TextEncoder().encode(apiKey)
-                );
-                const encryptedBase64 = btoa(String.fromCharCode(...new Uint8Array(encrypted)));
-                tg.sendData(JSON.stringify({ encrypted_key: encryptedBase64 }));
-                tg.close();   // попытка закрыть окно после отправки
-            } catch (err) {
-                errorDiv.textContent = 'Ошибка: ' + err.message;
-                sendBtn.disabled = false;
-                sendBtn.textContent = '🔒 Отправить';
+                tg.sendData(JSON.stringify({ test: text }));
+                document.getElementById('status').textContent = 'Данные отправлены, окно можно закрыть.';
+                tg.close();
+            } catch(e) {
+                document.getElementById('status').textContent = 'Ошибка: ' + e.message;
             }
         });
     </script>
