@@ -3,20 +3,43 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Mini App Привет</title>
+  <title>Тест sendData</title>
   <style>
-    body { font-family: Arial, sans-serif; text-align: center; margin-top: 80px; }
-    button { padding: 12px 30px; font-size: 18px; margin: 10px; cursor: pointer; }
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      margin-top: 40px;
+      padding: 0 16px;
+    }
+    button {
+      padding: 14px 32px;
+      font-size: 18px;
+      margin: 10px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    #btnSend { background: #4CAF50; color: white; }
+    #btnClose { background: #ccc; color: black; }
     #log {
-      margin-top: 20px; white-space: pre-wrap; text-align: left;
-      max-width: 320px; margin-left: auto; margin-right: auto;
-      background: #f5f5f5; padding: 10px; border-radius: 6px; font-size: 14px;
+      margin-top: 20px;
+      text-align: left;
+      background: #f9f9f9;
+      padding: 12px;
+      border-radius: 8px;
+      font-size: 13px;
+      white-space: pre-wrap;
+      word-break: break-word;
+      max-width: 360px;
+      margin-left: auto;
+      margin-right: auto;
     }
   </style>
 </head>
 <body>
-  <button id="btnSend">👋 Сказать «Привет»</button>
-  <button id="btnClose">🧪 Закрыть окно (тест)</button>
+  <h3>🔬 Тест sendData</h3>
+  <button id="btnSend">📤 Отправить "Привет!"</button>
+  <button id="btnClose">🚪 Закрыть окно</button>
   <div id="log"></div>
 
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
@@ -24,59 +47,75 @@
     const tg = window.Telegram.WebApp;
     const logDiv = document.getElementById('log');
 
-    function log(msg) { logDiv.innerText += msg + '\n'; }
-
-    // Сообщаем Telegram, что приложение готово к работе
-    tg.ready();
-    log('tg.ready() вызван');
-
-    const isInsideTelegram = tg.platform !== 'unknown';
-    if (isInsideTelegram) {
-      log('✅ Вы внутри Telegram Mini App (' + tg.platform + ')');
-      log('sendData доступен: ' + (typeof tg.sendData === 'function' ? 'да' : 'нет'));
-    } else {
-      log('⚠️ Режим разработки (браузер)');
-      log('Данные НЕ будут отправлены боту');
+    function log(msg) {
+      logDiv.textContent += msg + '\n';
+      // Автопрокрутка вниз
+      logDiv.scrollTop = logDiv.scrollHeight;
     }
 
-    document.getElementById('btnSend').addEventListener('click', async () => {
-      if (!isInsideTelegram) {
-        log('💡 Это браузерная имитация. Откройте приложение из Telegram, чтобы отправить данные.');
+    // --- Базовая информация ---
+    log('🔵 Платформа: ' + tg.platform);
+    log('🔵 Версия WebApp: ' + tg.version);
+
+    // Проверка initDataUnsafe
+    const unsafe = tg.initDataUnsafe;
+    log('🔵 query_id: ' + unsafe.query_id);
+    log('🔵 user: ' + (unsafe.user ? JSON.stringify(unsafe.user.first_name) : 'отсутствует'));
+    log('🔵 start_param: ' + (unsafe.start_param || 'нет'));
+
+    if (unsafe.user && unsafe.query_id) {
+      log('✅ Сессия валидна – Mini App открыт через бота');
+    } else {
+      log('⚠️ Сессия невалидна! Данные не уйдут. Откройте приложение через кнопку бота.');
+    }
+
+    // Сообщаем Telegram, что приложение готово
+    tg.ready();
+
+    // --- Кнопка отправки данных ---
+    document.getElementById('btnSend').addEventListener('click', () => {
+      log('▶ Нажата кнопка отправки');
+
+      // Дополнительная проверка
+      if (!unsafe.user || !unsafe.query_id) {
+        log('❌ Отправка невозможна: нет query_id/user. Откройте Mini App через кнопку бота.');
         return;
       }
 
-      log('▶ Нажата кнопка отправки...');
-      try {
-        // Вызываем sendData, может вернуть промис, а может и нет
-        const result = tg.sendData("Привет!");
-        log('Тип результата: ' + typeof result);
+      if (typeof tg.sendData !== 'function') {
+        log('❌ Метод sendData не поддерживается этой версией Telegram');
+        return;
+      }
 
-        // Если это промис, дождёмся его (и окно закроется само)
+      try {
+        const result = tg.sendData('Привет!');
+        log('📤 sendData вызван, результат: ' + typeof result);
+
+        // Промис или не промис – не важно, данные уже отправляются
         if (result && typeof result.then === 'function') {
-          await result;
-          log('✅ Промис выполнен, окно закроется автоматически.');
+          result.then(() => {
+            log('✅ Промис выполнен, окно закроется');
+          }).catch(e => {
+            log('❌ Ошибка в промисе: ' + e.message);
+          });
         } else {
-          // Промиса нет, но данные скорее всего уже отправлены.
-          log('ℹ️ sendData не вернул промис (особенность версии). Данные всё равно отправляются.');
-          // Немного ждём и принудительно закрываем окно, если оно не закрылось само.
+          log('ℹ️ sendData не возвращает промис. Данные всё равно отправлены.');
+          // Принудительно закроем через 500 мс, если окно ещё открыто
           setTimeout(() => {
-            log('⏳ Закрываем окно принудительно...');
+            log('⏳ Принудительное закрытие окна...');
             tg.close();
-          }, 300);
+          }, 500);
         }
       } catch (e) {
-        log('❌ Ошибка: ' + (e?.message || JSON.stringify(e)));
-        // Попытка закрыть окно даже при ошибке
-        setTimeout(() => tg.close(), 500);
+        log('❌ Ошибка при вызове sendData: ' + e.message);
+        setTimeout(() => tg.close(), 1000);
       }
     });
 
+    // --- Кнопка закрытия ---
     document.getElementById('btnClose').addEventListener('click', () => {
-      if (isInsideTelegram) {
-        tg.close();
-      } else {
-        log('🧪 Кнопка «Закрыть» работает только в Telegram');
-      }
+      log('🚪 Закрытие по кнопке');
+      tg.close();
     });
   </script>
 </body>
