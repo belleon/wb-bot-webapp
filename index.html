@@ -8,16 +8,9 @@
     body { font-family: Arial, sans-serif; text-align: center; margin-top: 80px; }
     button { padding: 12px 30px; font-size: 18px; margin: 10px; cursor: pointer; }
     #log {
-      margin-top: 20px;
-      white-space: pre-wrap;
-      text-align: left;
-      max-width: 320px;
-      margin-left: auto;
-      margin-right: auto;
-      background: #f5f5f5;
-      padding: 10px;
-      border-radius: 6px;
-      font-size: 14px;
+      margin-top: 20px; white-space: pre-wrap; text-align: left;
+      max-width: 320px; margin-left: auto; margin-right: auto;
+      background: #f5f5f5; padding: 10px; border-radius: 6px; font-size: 14px;
     }
   </style>
 </head>
@@ -31,13 +24,13 @@
     const tg = window.Telegram.WebApp;
     const logDiv = document.getElementById('log');
 
-    function log(msg) {
-      logDiv.innerText += msg + '\n';
-    }
+    function log(msg) { logDiv.innerText += msg + '\n'; }
 
-    // Определяем среду выполнения
+    // Сообщаем Telegram, что приложение готово к работе
+    tg.ready();
+    log('tg.ready() вызван');
+
     const isInsideTelegram = tg.platform !== 'unknown';
-
     if (isInsideTelegram) {
       log('✅ Вы внутри Telegram Mini App (' + tg.platform + ')');
       log('sendData доступен: ' + (typeof tg.sendData === 'function' ? 'да' : 'нет'));
@@ -46,7 +39,7 @@
       log('Данные НЕ будут отправлены боту');
     }
 
-    document.getElementById('btnSend').addEventListener('click', () => {
+    document.getElementById('btnSend').addEventListener('click', async () => {
       if (!isInsideTelegram) {
         log('💡 Это браузерная имитация. Откройте приложение из Telegram, чтобы отправить данные.');
         return;
@@ -54,25 +47,27 @@
 
       log('▶ Нажата кнопка отправки...');
       try {
+        // Вызываем sendData, может вернуть промис, а может и нет
         const result = tg.sendData("Привет!");
         log('Тип результата: ' + typeof result);
 
+        // Если это промис, дождёмся его (и окно закроется само)
         if (result && typeof result.then === 'function') {
-          // это промис – обрабатываем
-          result.then(() => {
-            log('✅ Данные отправлены успешно. Окно закроется автоматически.');
-          }).catch(err => {
-            log('❌ Ошибка при отправке: ' + JSON.stringify(err));
-            // при ошибке попробуем закрыть окно вручную
-            setTimeout(() => tg.close(), 500);
-          });
+          await result;
+          log('✅ Промис выполнен, окно закроется автоматически.');
         } else {
-          // промис не вернулся – помогаем закрыть окно
-          log('⚠️ sendData не вернул промис, закроем окно принудительно через 1 сек');
-          setTimeout(() => tg.close(), 1000);
+          // Промиса нет, но данные скорее всего уже отправлены.
+          log('ℹ️ sendData не вернул промис (особенность версии). Данные всё равно отправляются.');
+          // Немного ждём и принудительно закрываем окно, если оно не закрылось само.
+          setTimeout(() => {
+            log('⏳ Закрываем окно принудительно...');
+            tg.close();
+          }, 300);
         }
       } catch (e) {
-        log('❌ Исключение: ' + e.message);
+        log('❌ Ошибка: ' + (e?.message || JSON.stringify(e)));
+        // Попытка закрыть окно даже при ошибке
+        setTimeout(() => tg.close(), 500);
       }
     });
 
