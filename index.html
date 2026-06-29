@@ -3,58 +3,37 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Диагностика Mini App</title>
+    <title>Тест</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <style>
-        body { font-family: sans-serif; padding: 20px; }
-        input, button { width: 100%; padding: 12px; margin: 8px 0; box-sizing: border-box; }
-        .log { margin-top: 20px; padding: 10px; background: #f0f0f0; border-radius: 8px; font-size: 14px; white-space: pre-wrap; }
-    </style>
 </head>
 <body>
-    <h3>Диагностика Mini App</h3>
-    <input type="text" id="apiKey" placeholder="Введите любой текст">
-    <button id="sendBtn" disabled>Отправить в бота</button>
-    <div class="log" id="log">Жду действий...</div>
+    <h3>Тест отправки</h3>
+    <input type="text" id="inp" placeholder="Текст">
+    <button id="btn" disabled>Отправить</button>
+    <div id="log"></div>
 
     <script>
         const tg = window.Telegram.WebApp;
         tg.ready();
 
-        const apiKeyInput = document.getElementById('apiKey');
-        const sendBtn = document.getElementById('sendBtn');
-        const logDiv = document.getElementById('log');
+        const inp = document.getElementById('inp');
+        const btn = document.getElementById('btn');
+        const log = document.getElementById('log');
 
-        function addLog(msg) {
-            logDiv.textContent += '\n' + msg;
-        }
-
-        // Проверим доступность sendData сразу
-        if (typeof tg.sendData === 'function') {
-            addLog('✅ sendData доступен');
-        } else {
-            addLog('❌ sendData НЕ функция!');
-        }
-
-        apiKeyInput.addEventListener('input', () => {
-            sendBtn.disabled = apiKeyInput.value.trim() === '';
+        inp.addEventListener('input', () => {
+            btn.disabled = inp.value.trim() === '';
         });
 
-        sendBtn.addEventListener('click', () => {
-            const text = apiKeyInput.value.trim();
+        btn.addEventListener('click', () => {
+            const text = inp.value.trim();
             if (!text) return;
 
-            addLog('Нажата кнопка, текст: ' + text);
-
+            log.textContent = 'Отправляю: ' + text;
             try {
-                const data = JSON.stringify({ test: text });
-                addLog('Вызываю sendData с: ' + data);
-                tg.sendData(data);
-                addLog('✅ sendData вызван без ошибок');
-                // Попробуем закрыть окно (не обязательно)
-                // tg.close();
+                tg.sendData(JSON.stringify({ test: text }));
+                log.textContent += ' | sendData вызван';
             } catch (e) {
-                addLog('❌ ОШИБКА: ' + e.message);
+                log.textContent = 'Ошибка: ' + e.message;
             }
         });
     </script>
