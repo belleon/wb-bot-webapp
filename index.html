@@ -1,35 +1,21 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Диагностика</title>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
-</head>
-<body>
-    <h3>Тест отправки</h3>
-    <input type="text" id="textInput" placeholder="Введите любой текст">
-    <button id="sendBtn" disabled>Отправить в бота</button>
-    <div id="status"></div>
-    <script>
-        const tg = window.Telegram.WebApp;
-        tg.ready();
+<script>
+    const tg = window.Telegram.WebApp;
+    tg.ready();
 
-        document.getElementById('textInput').addEventListener('input', (e) => {
-            document.getElementById('sendBtn').disabled = e.target.value.trim() === '';
-        });
+    // Безусловная отправка тестовых данных при загрузке (дополнительно)
+    // (закомментируйте, если не нужно)
+    // tg.sendData(JSON.stringify({ test: 'auto' }));
 
-        document.getElementById('sendBtn').addEventListener('click', () => {
-            const text = document.getElementById('textInput').value.trim();
-            if (!text) return;
-            try {
-                tg.sendData(JSON.stringify({ test: text }));
-                document.getElementById('status').textContent = 'Данные отправлены, окно можно закрыть.';
-                tg.close();
-            } catch(e) {
-                document.getElementById('status').textContent = 'Ошибка: ' + e.message;
-            }
-        });
-    </script>
-</body>
-</html>
+    // Существующая кнопка "Отправить"
+    document.getElementById('sendBtn').addEventListener('click', () => {
+        const text = document.getElementById('apiKey').value.trim() || 'пусто';
+        tg.sendData(JSON.stringify({ test: text }));
+        // Для наглядности покажем, что кнопка нажата
+        document.getElementById('status').textContent = 'Отправлено: ' + text;
+    });
+
+    // Добавим явную проверку на существование sendData
+    if (typeof tg.sendData !== 'function') {
+        document.getElementById('status').textContent = 'ОШИБКА: sendData недоступен!';
+    }
+</script>
