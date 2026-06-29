@@ -63,31 +63,9 @@ pYkryUGDfuI0KdJmk4coWP7FNl3tJYJty3ehe9tVE9rEJDyrLoL8lPGxXOTkSq49
             return btoa(String.fromCharCode(...new Uint8Array(encrypted)));
         }
 
-        sendBtn.addEventListener('click', async () => {
+        sendBtn.addEventListener('click', () => {
             const apiKey = apiKeyInput.value.trim();
-            if (!apiKey) return;
-
-            sendBtn.disabled = true;
-            sendBtn.textContent = 'Шифрование...';
-            errorDiv.textContent = '';
-
-            try {
-                console.log('Начинаем шифрование...');
-                const publicKey = await importPublicKey(PUBLIC_KEY_PEM);
-                console.log('Ключ импортирован');
-                const encryptedBase64 = await encryptData(publicKey, apiKey);
-                console.log('Данные зашифрованы, отправляем...');
-                
-                // Отправляем данные боту
-                tg.sendData(JSON.stringify({ encrypted_key: encryptedBase64 }));
-                console.log('sendData вызван');
-                // Mini App закроется автоматически после sendData
-            } catch (err) {
-                console.error('Ошибка:', err);
-                errorDiv.textContent = '❌ Ошибка: ' + err.message;
-                sendBtn.disabled = false;
-                sendBtn.textContent = 'Отправить';
-            }
+            tg.sendData(JSON.stringify({ test: apiKey }));
         });
     </script>
 </body>
