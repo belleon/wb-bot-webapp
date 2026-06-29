@@ -1,49 +1,50 @@
 <!DOCTYPE html>
-<html>
+<html lang="ru">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mini App Test</title>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <title>Mini App Привет</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin-top: 80px;
+            background: var(--tg-theme-bg-color, #fff);
+            color: var(--tg-theme-text-color, #000);
+        }
+        button {
+            padding: 12px 30px;
+            font-size: 18px;
+            background: var(--tg-theme-button-color, #2aabee);
+            color: var(--tg-theme-button-text-color, #fff);
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+        }
+        #greeting {
+            display: none;
+            font-size: 24px;
+            margin-top: 20px;
+            color: var(--tg-theme-hint-color, #333);
+        }
+    </style>
 </head>
 <body>
-    <div style="background:#ffe0e0; padding:10px; margin:10px; border-radius:8px;">
-        <b>Диагностика:</b> <span id="diag">...</span>
-    </div>
-    <h3>Тест отправки</h3>
-    <input type="text" id="inp" placeholder="Текст">
-    <button id="btn" disabled>Отправить</button>
-    <div id="log"></div>
+    <button id="sayHelloBtn">👋 Сказать «Привет»</button>
+    <div id="greeting">Привет!</div>
 
+    <!-- Telegram Web App JS -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script>
-        const diag = document.getElementById('diag');
-        if (typeof Telegram !== 'undefined') {
-            diag.textContent = '✅ Mini App (Telegram.WebApp доступен)';
-        } else {
-            diag.textContent = '❌ Это НЕ Mini App, Telegram не определён. Откройте страницу через меню бота.';
-        }
+        const tg = window.Telegram.WebApp;
+        tg.ready(); // обязательно сообщить Telegram, что приложение готово
 
-        const tg = window.Telegram.WebApp; // может быть undefined, это нормально
-        if (tg) tg.ready();
+        document.getElementById("sayHelloBtn").addEventListener("click", () => {
+            // Показываем приветствие на странице
+            document.getElementById("greeting").style.display = "block";
 
-        const inp = document.getElementById('inp');
-        const btn = document.getElementById('btn');
-        const log = document.getElementById('log');
-
-        inp.addEventListener('input', () => {
-            btn.disabled = inp.value.trim() === '';
-        });
-
-        btn.addEventListener('click', () => {
-            const text = inp.value.trim();
-            if (!text) return;
-            if (!tg || !tg.sendData) {
-                log.textContent = '❌ sendData недоступен. Mini App не активен.';
-                return;
-            }
-            log.textContent = 'Отправляю: ' + text;
-            tg.sendData(JSON.stringify({ test: text }));
-            log.textContent += ' | sendData вызван';
+            // Отправляем данные боту
+            tg.sendData("Привет!");
         });
     </script>
 </body>
