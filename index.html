@@ -3,18 +3,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Тест</title>
+    <title>Mini App Test</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
+    <div style="background:#ffe0e0; padding:10px; margin:10px; border-radius:8px;">
+        <b>Диагностика:</b> <span id="diag">...</span>
+    </div>
     <h3>Тест отправки</h3>
     <input type="text" id="inp" placeholder="Текст">
     <button id="btn" disabled>Отправить</button>
     <div id="log"></div>
 
     <script>
-        const tg = window.Telegram.WebApp;
-        tg.ready();
+        const diag = document.getElementById('diag');
+        if (typeof Telegram !== 'undefined') {
+            diag.textContent = '✅ Mini App (Telegram.WebApp доступен)';
+        } else {
+            diag.textContent = '❌ Это НЕ Mini App, Telegram не определён. Откройте страницу через меню бота.';
+        }
+
+        const tg = window.Telegram.WebApp; // может быть undefined, это нормально
+        if (tg) tg.ready();
 
         const inp = document.getElementById('inp');
         const btn = document.getElementById('btn');
@@ -27,14 +37,13 @@
         btn.addEventListener('click', () => {
             const text = inp.value.trim();
             if (!text) return;
-
-            log.textContent = 'Отправляю: ' + text;
-            try {
-                tg.sendData(JSON.stringify({ test: text }));
-                log.textContent += ' | sendData вызван';
-            } catch (e) {
-                log.textContent = 'Ошибка: ' + e.message;
+            if (!tg || !tg.sendData) {
+                log.textContent = '❌ sendData недоступен. Mini App не активен.';
+                return;
             }
+            log.textContent = 'Отправляю: ' + text;
+            tg.sendData(JSON.stringify({ test: text }));
+            log.textContent += ' | sendData вызван';
         });
     </script>
 </body>
