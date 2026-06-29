@@ -3,37 +3,41 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Тест sendData</title>
+    <title>Привет Mini App</title>
     <style>
         body { font-family: Arial; text-align: center; margin-top: 80px; }
         button { padding: 12px 30px; font-size: 18px; }
-        #error { color: red; margin-top: 15px; white-space: pre-wrap; }
+        #status { margin-top: 15px; white-space: pre-wrap; }
     </style>
 </head>
 <body>
     <button id="btn">👋 Сказать «Привет»</button>
-    <div id="error"></div>
+    <div id="status"></div>
 
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script>
         const tg = window.Telegram.WebApp;
-        const errorDiv = document.getElementById('error');
+        const statusDiv = document.getElementById('status');
 
-        // Проверяем, что WebApp API доступен
-        if (!tg || !tg.sendData) {
-            errorDiv.innerText = 'Telegram WebApp API не загружен. Откройте страницу внутри Telegram.';
+        // Проверяем, что метод sendData вообще существует
+        if (typeof tg.sendData !== 'function') {
+            statusDiv.innerText = '❌ sendData недоступен.\nПричина: не добавлен домен в BotFather.';
+        } else {
+            statusDiv.innerText = '✅ sendData доступен. Можно отправлять данные.';
         }
 
         document.getElementById('btn').addEventListener('click', () => {
-            // Пытаемся отправить данные
-            tg.sendData("Привет!")
+            if (typeof tg.sendData !== 'function') {
+                statusDiv.innerText = '❌ sendData всё ещё недоступен. Добавьте домен в BotFather!';
+                return;
+            }
+            
+            tg.sendData('Привет!')
                 .then(() => {
-                    errorDiv.innerText = 'Успех! Окно закроется автоматически.';
+                    statusDiv.innerText = '✅ Отправлено!';
                 })
-                .catch((err) => {
-                    // Выводим полную информацию об ошибке
-                    errorDiv.innerText = 'Ошибка sendData:\n' + JSON.stringify(err, null, 2);
-                    console.error(err);
+                .catch(err => {
+                    statusDiv.innerText = '❌ Ошибка: ' + JSON.stringify(err);
                 });
         });
     </script>
