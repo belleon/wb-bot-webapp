@@ -5,9 +5,20 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Mini App Привет</title>
   <style>
-    body { font-family: Arial; text-align: center; margin-top: 80px; }
-    button { padding: 12px 30px; font-size: 18px; margin: 10px; }
-    #log { margin-top: 20px; white-space: pre-wrap; text-align: left; max-width: 300px; margin-left: auto; margin-right: auto; }
+    body { font-family: Arial, sans-serif; text-align: center; margin-top: 80px; }
+    button { padding: 12px 30px; font-size: 18px; margin: 10px; cursor: pointer; }
+    #log {
+      margin-top: 20px;
+      white-space: pre-wrap;
+      text-align: left;
+      max-width: 320px;
+      margin-left: auto;
+      margin-right: auto;
+      background: #f5f5f5;
+      padding: 10px;
+      border-radius: 6px;
+      font-size: 14px;
+    }
   </style>
 </head>
 <body>
@@ -20,27 +31,44 @@
     const tg = window.Telegram.WebApp;
     const logDiv = document.getElementById('log');
 
-    function log(msg) { logDiv.innerText += msg + '\n'; }
+    function log(msg) {
+      logDiv.innerText += msg + '\n';
+    }
 
-    log(typeof tg.sendData === 'function' ? '✅ sendData доступен' : '❌ sendData недоступен');
+    // Определяем среду выполнения
+    const isInsideTelegram = tg.platform !== 'unknown';
+
+    if (isInsideTelegram) {
+      log('✅ Вы внутри Telegram Mini App (' + tg.platform + ')');
+      log('sendData доступен: ' + (typeof tg.sendData === 'function' ? 'да' : 'нет'));
+    } else {
+      log('⚠️ Режим разработки (браузер)');
+      log('Данные НЕ будут отправлены боту');
+    }
 
     document.getElementById('btnSend').addEventListener('click', () => {
+      if (!isInsideTelegram) {
+        log('💡 Это браузерная имитация. Откройте приложение из Telegram, чтобы отправить данные.');
+        return;
+      }
+
       log('▶ Нажата кнопка отправки...');
       try {
         const result = tg.sendData("Привет!");
-        log('result: ' + typeof result);
+        log('Тип результата: ' + typeof result);
 
         if (result && typeof result.then === 'function') {
-          // Это промис – обрабатываем стандартно
+          // это промис – обрабатываем
           result.then(() => {
-            log('✅ Успех! Окно закроется автоматически.');
+            log('✅ Данные отправлены успешно. Окно закроется автоматически.');
           }).catch(err => {
-            log('❌ Ошибка: ' + JSON.stringify(err));
+            log('❌ Ошибка при отправке: ' + JSON.stringify(err));
+            // при ошибке попробуем закрыть окно вручную
             setTimeout(() => tg.close(), 500);
           });
         } else {
-          // Промис не вернулся, окно может не закрыться – помогаем
-          log('⚠️ sendData не вернул промис, принудительно закроем окно через 1 сек');
+          // промис не вернулся – помогаем закрыть окно
+          log('⚠️ sendData не вернул промис, закроем окно принудительно через 1 сек');
           setTimeout(() => tg.close(), 1000);
         }
       } catch (e) {
@@ -49,7 +77,11 @@
     });
 
     document.getElementById('btnClose').addEventListener('click', () => {
-      tg.close();
+      if (isInsideTelegram) {
+        tg.close();
+      } else {
+        log('🧪 Кнопка «Закрыть» работает только в Telegram');
+      }
     });
   </script>
 </body>
