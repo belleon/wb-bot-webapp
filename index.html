@@ -3,77 +3,39 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mini App Привет</title>
+    <title>Тест sendData</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            text-align: center;
-            margin-top: 80px;
-            background: var(--tg-theme-bg-color, #fff);
-            color: var(--tg-theme-text-color, #000);
-        }
-        button {
-            padding: 12px 30px;
-            font-size: 18px;
-            background: var(--tg-theme-button-color, #2aabee);
-            color: var(--tg-theme-button-text-color, #fff);
-            border: none;
-            border-radius: 12px;
-            cursor: pointer;
-        }
-        #greeting {
-            display: none;
-            font-size: 24px;
-            margin-top: 20px;
-            color: var(--tg-theme-hint-color, #333);
-        }
-        #debug {
-            margin-top: 20px;
-            font-size: 14px;
-            color: red;
-            white-space: pre-wrap;
-        }
+        body { font-family: Arial; text-align: center; margin-top: 80px; }
+        button { padding: 12px 30px; font-size: 18px; }
+        #error { color: red; margin-top: 15px; white-space: pre-wrap; }
     </style>
 </head>
 <body>
-    <button id="sayHelloBtn">👋 Сказать «Привет»</button>
-    <div id="greeting">Привет!</div>
-    <div id="debug"></div>
+    <button id="btn">👋 Сказать «Привет»</button>
+    <div id="error"></div>
 
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script>
         const tg = window.Telegram.WebApp;
-        tg.ready();
+        const errorDiv = document.getElementById('error');
 
-        const debug = document.getElementById("debug");
+        // Проверяем, что WebApp API доступен
+        if (!tg || !tg.sendData) {
+            errorDiv.innerText = 'Telegram WebApp API не загружен. Откройте страницу внутри Telegram.';
+        }
 
-        document.getElementById("sayHelloBtn").addEventListener("click", () => {
-            // Показываем приветствие сразу
-            document.getElementById("greeting").style.display = "block";
-
-            // Отправляем данные с обработкой ошибок
-            try {
-                tg.sendData("Привет!")
-                    .then(() => {
-                        // Успех – окно закроется автоматически, но можно ничего не делать
-                        debug.innerText = "Данные отправлены, окно закроется...";
-                    })
-                    .catch((err) => {
-                        debug.innerText = "Ошибка sendData: " + JSON.stringify(err);
-                        console.error("sendData error:", err);
-                    });
-            } catch (e) {
-                debug.innerText = "Исключение при вызове sendData: " + e.message;
-                console.error(e);
-            }
+        document.getElementById('btn').addEventListener('click', () => {
+            // Пытаемся отправить данные
+            tg.sendData("Привет!")
+                .then(() => {
+                    errorDiv.innerText = 'Успех! Окно закроется автоматически.';
+                })
+                .catch((err) => {
+                    // Выводим полную информацию об ошибке
+                    errorDiv.innerText = 'Ошибка sendData:\n' + JSON.stringify(err, null, 2);
+                    console.error(err);
+                });
         });
-
-        // // Дополнительно: принудительно закрыть через 3 секунды, если не закрылось
-        // setTimeout(() => {
-        //     if (tg.isExpanded) {
-        //         tg.close();
-        //     }
-        // }, 300);
     </script>
 </body>
 </html>
